@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=0.6,maximum-scale=0.6,initial-scale=0.6,user-scalable=no">
+    <title>Ball and Gates</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css" media="all">
+</head>
+<body onmousemove = "mouseCoords()" ontouchmove="touchCoords()" onload="load_status.style.display = 'none'" style="overflow: hidden">
+<p id="load_status" style="font-size: 50pt; display: block; font-family: Helvetica; color: #cccccc; text-align: center; vertical-align: bottom">Загрузка...</p>
+<canvas id="myCanvas" width="1000" height="400"></canvas>
+
+<div id="openModal" class="modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Вы проиграли</h3>
+        <a href="ball_and_gate.html" title="Close" class="close">×</a>
+      </div>
+      <div class="modal-body">    
+        <p>К сожалению, Вы не попали в ворота.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+	//чем меньше мяч коснулся стен, тем больше очков
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+	var windowHeight = document.documentElement.clientHeight;
+	var windowWidth = document.documentElement.clientWidth;
+	var gatesHeight = 300;
+	var gatesWidth = 120;
+	var gatesLineWidth = 15;
+	var gatesX = 50;
+	var ballRadius = 30;
+	var gatesY = Math.random() * (windowHeight - gatesHeight - 2 * ballRadius) + ballRadius;
+	var ballX = Math.random() * (windowWidth / 2 - 2 * ballRadius) + windowWidth / 2 + ballRadius;
+	var ballY = Math.random() * (windowHeight - 2 * ballRadius) + ballRadius;
+	var checkMouseClick = false;
+	var mouseX = 0;
+	var mouseY = 0;
+	var trackLength = 10;
+	var trackDist = 5;
+	var ballSpeedX = 0;
+	var ballSpeedY = 0; 
+	var touchCount = 0; //количество касаний
+	var score = 0;
+	var barrierCount = 0;
+	var barrierSpeed = 3;
+	var barrierHeight = 150;
+	var barrierWidth = 50;
+	var barriers = [];
+	var barrierOffset = ((windowWidth / 2) - gatesX - gatesWidth) / (barrierCount + 1);
+	var force_val;
+	var max_force_val = 0.25 * Math.sqrt(windowWidth * windowWidth + windowHeight * windowHeight);
+	var track_reflection = 10;
+	
+	for(var i = 0; i < barrierCount; i++) {
+    	barriers[i] = { x: gatesX + gatesWidth + (i + 1) * barrierOffset - barrierWidth / 2, y: Math.random() * (windowHeight - barrierHeight - 2 * ballRadius) + ballRadius, speed: Math.random() * barrierSpeed + 2};
+	}
+	
+	document.addEventListener("click", mouseClick, false);
+	document.addEventListener("touchend", mouseClick, false);
+	
+	function mouseCoords() {
+		mouseX = event.clientX;
+		mouseY = event.clientY;
+	}
+	
+	function touchCoords() {
+		mouseX = event.touches[0].clientX;
+		mouseY = event.touches[0].clientY;
+	}
+	
+	function mouseClick() {
+		if (!checkMouseClick){
+			ballSpeedX = ((ballX - mouseX) / Math.min(windowWidth, windowHeight)) * (Math.min(ballRadius, Math.min(barrierWidth, barrierHeight)) / 2);
+			ballSpeedY = ((ballY - mouseY) / Math.min(windowWidth, windowHeight)) * (Math.min(ballRadius, Math.min(barrierWidth, barrierHeight)) / 2);
+		}
+		checkMouseClick = true;
+	}
+	
+	function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        windowHeight = document.documentElement.clientHeight;
+		windowWidth = document.documentElement.clientWidth;
+		if (windowWidth < ballX + ballRadius){
+			ballX = Math.random() * (windowWidth / 2 - 2 * ballRadius) + windowWidth / 2 + ballRadius;
+		}
+		if (windowHeight < ballY + ballRadius){
+			ballY = Math.random() * (windowHeight - 2 * ballRadius) + ballRadius;
+		}
+	}
+	
+	function drawGates() {
+		ctx.beginPath();
+		ctx.lineWidth = gatesLineWidth;
+		ctx.strokeStyle = "#ffffff";
+		ctx.moveTo(gatesX + gatesWidth, gatesY);
+		ctx.lineTo(gatesX, gatesY);
+		ctx.lineTo(gatesX, gatesY + gatesHeight);
+		ctx.lineTo(gatesX + gatesWidth, gatesY + gatesHeight);
+		ctx.stroke();
+		ctx.closePath();
+	}
+	
+	function drawTrack() {
+		var tan = Math.abs((ballY - mouseY) / (ballX - mouseX));    	
+		ctx.beginPath();
+		ctx.lineWidth = 3;
+		ctx.strokeStyle = "#ccffcc";
+		var startX = ballX, startY = ballY;
+		var trackDX = trackLength / Math.sqrt(1 + tan * tan);
+		var trackDY = (tan * trackLength) / Math.sqrt(1 + tan * tan);
+		var distDX = trackDist / Math.sqrt(1 + tan * tan);
+		var distDY = (tan * trackDist) / Math.sqrt(1 + tan * tan);
+		var sgnX = Math.sign(ballX - mouseX), sgnY = Math.sign(ballY - mouseY);
+		var tmp_track_reflection = track_reflection;
+		while (startX > 0 && tmp_track_reflection >= 0){
+			ctx.moveTo(startX, startY);
+			ctx.lineTo(startX + sgnX * trackDX, startY + sgnY *  trackDY);
+			if (startX + sgnX * (trackDX + distDX) >= windowWidth - ballRadius){
+				sgnX = -sgnX;
+				tmp_track_reflection--;
+				startX = windowWidth - ballRadius;
+			} else {
+				startX += sgnX * (trackDX + distDX);
+			}
+			if (startY + sgnY * (trackDY + distDY) >= windowHeight - ballRadius){
+				sgnY = -sgnY;
+				tmp_track_reflection--;
+				startY = windowHeight - ballRadius;
+			} else if (startY + sgnY * (trackDY + distDY) <= ballRadius){
+				sgnY = -sgnY;
+				tmp_track_reflection--;
+				startY = ballRadius;
+			} else {
+				startY += sgnY * (trackDY + distDY);
+			}
+		}
+		ctx.stroke();
+		ctx.closePath();
+	}
+	
+	function drawFields() {
+		ctx.beginPath();
+		ctx.lineWidth = 2 * ballRadius;
+		ctx.strokeStyle = "#ffffff";
+		ctx.moveTo(0, 0);
+		ctx.lineTo(windowWidth, 0);
+		ctx.lineTo(windowWidth, windowHeight);
+		ctx.lineTo(0, windowHeight);
+		ctx.lineTo(0, 0);
+		ctx.stroke();
+		ctx.closePath();
+	}
+	
+	function drawDecoration() {
+		var centerRadius = Math.min(windowWidth, windowHeight) / 4;
+		ctx.beginPath();
+		ctx.lineWidth = ballRadius;
+		ctx.strokeStyle = "#ffffff";
+		ctx.arc(windowWidth / 2, windowHeight / 2, centerRadius, 0, Math.PI*2);
+		ctx.moveTo(windowWidth / 2, 0);
+		ctx.lineTo(windowWidth / 2, windowHeight);
+		ctx.stroke();
+		ctx.closePath();
+	}
+	
+	function drawBarrier() {
+		for(var i = 0; i < barrierCount; i++) {
+        	ctx.beginPath();
+        	ctx.arc(barriers[i].x + barrierWidth / 2, barriers[i].y, barrierWidth / 2, 0, Math.PI*2);
+        	ctx.arc(barriers[i].x + barrierWidth / 2, barriers[i].y + barrierHeight, barrierWidth / 2, 0, Math.PI*2);
+        	ctx.rect(barriers[i].x, barriers[i].y, barrierWidth, barrierHeight);
+        	ctx.fillStyle = "red";
+    		ctx.fill();
+        	ctx.closePath();
+        	ctx.beginPath();
+        	ctx.arc(barriers[i].x + barrierWidth / 2, barriers[i].y + barrierHeight / 2, barrierWidth, 0, Math.PI*2);
+        	ctx.fillStyle = "pink";
+    		ctx.fill();
+        	ctx.closePath();
+        	if (barriers[i].y + barriers[i].speed <= ballRadius || barriers[i].y + barrierHeight + barriers[i].speed >= windowHeight - ballRadius){
+        		barriers[i].speed = -barriers[i].speed;
+        	}
+        	barriers[i].y += barriers[i].speed;
+    	}
+	}
+	
+	function drawScore() {
+    	ctx.font = "18px Arial";
+    	ctx.fillStyle = "#00a550";
+    	ctx.fillText("Счёт: " + score, 8, 20);
+	}
+	
+	function drawTouches() {
+    	ctx.font = "18px Arial";
+    	ctx.fillStyle = "#00a550";
+    	if (touchCount > 99){
+    		ctx.fillText("Касания: ∞", windowWidth - 100, 20);
+    	} else {
+    		ctx.fillText("Касания: " + touchCount, windowWidth - 100, 20);
+    	}
+	}
+	
+	function drawBall(){
+		ctx.beginPath();
+		ctx.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
+		ctx.fillStyle = "#f5f5f5";
+		ctx.fill();
+		ctx.closePath();
+	}
+	
+	function drawForce(){
+		ctx.beginPath();
+		ctx.font = "18px Arial";
+    	ctx.fillStyle = "#00a550";
+    	ctx.fillText("Сила: ", 8, windowHeight - 10);
+    	ctx.closePath();
+    	ctx.beginPath();
+    	ctx.rect(100, windowHeight - 25, max_force_val, 20);
+    	ctx.fillStyle = "rgb(204, 204, 204)";
+    	ctx.fill();
+        ctx.closePath();
+    	ctx.beginPath();
+    	ctx.rect(100, windowHeight - 25, force_val, 20);
+    	if (force_val > (2 / 3) * max_force_val){
+    		ctx.fillStyle = "red";
+    	} else if (force_val > (1 / 3) * max_force_val){
+    		ctx.fillStyle = "yellow";
+    	} else {
+    		ctx.fillStyle = "green";
+    	}
+    	ctx.fill();
+        ctx.closePath();
+	}
+	
+	function draw() {
+		resizeCanvas();
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawGates();
+		drawDecoration();
+		if (!checkMouseClick){
+			drawTrack();
+		}
+		drawFields();
+		drawBarrier();
+		drawScore();
+		drawTouches();
+		var nextBarrier = 0;
+		if (checkMouseClick){
+			if (ballX + ballSpeedX < -ballRadius){
+				location.href = '#openModal';
+            }
+			if (ballX + ballSpeedX > windowWidth - ballRadius){
+				ballSpeedX = -ballSpeedX;
+				touchCount++;
+			}
+			if (ballY + ballSpeedY < ballRadius || ballY + ballSpeedY > windowHeight - ballRadius){
+				ballSpeedY = -ballSpeedY;
+				touchCount++;
+			}
+			var check = 0;
+			for (var i = 0; i < barrierCount; i++){
+				if ((ballX + ballRadius) >= barriers[i].x && (ballX + ballRadius) <= (barriers[i].x + barrierWidth) && ballY > barriers[i].y && ballY < (barriers[i].y + barrierHeight)){
+					ballSpeedX = -ballSpeedX;
+					ballX = barriers[i].x - ballRadius - 1;
+					touchCount++;
+				} else if ((ballX - ballRadius) >= barriers[i].x && (ballX - ballRadius) <= (barriers[i].x + barrierWidth) && ballY > barriers[i].y && ballY < (barriers[i].y + barrierHeight)){
+					ballSpeedX = -ballSpeedX;
+					ballX = barriers[i].x + ballRadius + barrierWidth + 1;
+					touchCount++;
+				} 
+				if ((ballY + ballRadius) >= barriers[i].y && (ballY + ballRadius) <= (barriers[i].y + barrierHeight) && ballX > barriers[i].x && ballX < (barriers[i].x + barrierWidth)){
+					ballSpeedY = -ballSpeedY;
+					ballY = barriers[i].y - ballRadius - 1;
+					touchCount++;
+				} else if ((ballY - ballRadius) >= barriers[i].y && (ballY - ballRadius) <= (barriers[i].y + barrierHeight) && ballX > barriers[i].x && ballX < (barriers[i].x + barrierWidth)){
+					ballSpeedY = -ballSpeedY;
+					ballY = barriers[i].y + ballRadius + barrierHeight + 1;
+					touchCount++;
+				} 
+			}
+			if (ballX <= (gatesX + gatesWidth) && ballY >= (gatesY + gatesLineWidth) && ballY <= (gatesY + gatesHeight - gatesLineWidth)){
+				if (touchCount == 0){
+					score += 1000;
+				} else if (touchCount < 10){
+					score += 100;
+				} else if (touchCount < 50){
+					score += 5;
+				} else if (touchCount < 100){
+					score += 1;
+				}////////////////////////////////////////////////////////////////////
+                ballX = Math.random() * (windowWidth / 2 - 2 * ballRadius) + windowWidth / 2 + ballRadius;
+				ballY = Math.random() * (windowHeight - 2 * ballRadius) + ballRadius;
+				gatesY = Math.random() * (windowHeight - gatesHeight - 2 * ballRadius) + ballRadius;
+				touchCount = 0;
+				checkMouseClick = false;
+				if (barrierCount < 3){
+					if (nextBarrier != Math.floor(score / 100)){
+						nextBarrier = Math.floor(score / 100);
+						barrierCount++;
+					}
+					barrierOffset = ((windowWidth / 2) - gatesX - gatesWidth) / (barrierCount + 1);
+					for(var i = 0; i < barrierCount; i++) {
+    					barriers[i] = { x: gatesX + gatesWidth + (i + 1) * barrierOffset - barrierWidth / 2, y: Math.random() * (windowHeight - barrierHeight - 2 * ballRadius) + ballRadius, speed: Math.random() * barrierSpeed + 2};
+					}
+				}
+			} else {
+				if (ballX <= (gatesX + gatesWidth) && (ballY >= gatesY - ballRadius && ballY <= (gatesY + gatesHeight + ballRadius))) {
+					ballSpeedY = -ballSpeedY;
+					touchCount++;
+				} else if (ballY >= (gatesY - ballRadius) && ballY <= (gatesY + ballRadius) && (ballX - ballRadius) <= gatesX + gatesWidth){
+					ballSpeedX = -ballSpeedX;
+					ballX = gatesX + gatesWidth + gatesLineWidth + 1 + ballRadius;
+					touchCount++;
+				} else if (ballY >= (gatesY + gatesHeight - ballRadius) && ballY <= (gatesY + gatesHeight + ballRadius) && (ballX - ballRadius) <= gatesX + gatesWidth){
+					ballSpeedX = -ballSpeedX;
+					ballX = gatesX + gatesWidth + gatesLineWidth + 1 + ballRadius;
+					touchCount++;
+				}
+			}
+			ballX += ballSpeedX;
+			ballY += ballSpeedY;
+		} else { 
+			force_val = max_force_val * (Math.sqrt((ballX - mouseX) * (ballX - mouseX) + (ballY - mouseY) * (ballY - mouseY)) / Math.sqrt(windowWidth * windowWidth + windowHeight * windowHeight));
+			drawForce();
+		}
+		drawBall();
+		requestAnimationFrame(draw);
+	}
+	
+	draw(); 
+	//setInterval(draw, 10);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Canvas Game</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css" media="all">
+    <meta name="viewport" content="width=device-width, minimum-scale=0.6,maximum-scale=0.6,initial-scale=0.6,user-scalable=no">
+</head>
+<body>
+	
+<canvas id="myCanvas" width="1000" height="400"></canvas>
+
+<div id="openModal1" class="modal">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h3 class="modal-title">Вы проиграли</h3>
+        			<a href="classic.html" title="Close" class="close">×</a>
+      			</div>
+      			<div class="modal-body">    
+        			<p>Вы не поймали мячик :(</p>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+	
+	<div id="openModal2" class="modal">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h3 class="modal-title">Вы выиграли!</h3>
+        			<a href="classic.html" title="Close" class="close">×</a>
+      			</div>
+      			<div class="modal-body">    
+        			<p>Мои поздравления</p>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+
+<script>
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+	var windowHeight = document.documentElement.clientHeight;
+	var windowWidth = document.documentElement.clientWidth;
+	var ballRadius = 10;
+	var x = Math.random() * (windowWidth - 2 * ballRadius) + ballRadius;
+	var y = Math.random() * (windowHeight / 2 - 2 * ballRadius) + windowHeight / 2 + ballRadius;
+	var ballSpeed = 7;
+	var dy = Math.random() * 3 + (ballSpeed - 3);
+	var dx = Math.sqrt(ballSpeed * ballSpeed - dy * dy);
+	var paddleHeight = 10;
+	var paddleWidth = windowWidth / 3;
+	var minPaddleWidth = 75;
+	var paddleX = (windowWidth-paddleWidth)/2;
+	var rightPressed = false;
+	var leftPressed = false;
+	var brickWidth = 75;
+	var brickHeight = 20;
+	var brickPadding = 10;
+	var brickOffsetTop = 30;
+	var brickRowCount = Math.floor(((windowHeight / 2) - brickOffsetTop) / (brickHeight+brickPadding));
+	var brickColumnCount = Math.floor(windowWidth / (brickWidth+brickPadding));
+	var brickOffsetLeft = (windowWidth - brickWidth * brickColumnCount - brickPadding * Math.max(0, brickColumnCount - 1)) / 2;
+	var bricks = [];
+	var score = 0;
+	var requestId;
+	
+	for(var c = 0; c < brickColumnCount; c++) {
+    	bricks[c] = [];
+    	for(var r = 0; r < brickRowCount; r++) {
+        	bricks[c][r] = { x: 0, y: 0, status: 1 };
+    	}
+	}
+	document.addEventListener("keydown", keyDownHandler, false);
+	document.addEventListener("keyup", keyUpHandler, false);
+	document.addEventListener("mousemove", mouseMoveHandler, false);
+	document.addEventListener("touchmove", touchMoveHandler, false);
+	
+	resizeCanvas();
+	
+	function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        draw(); 
+	}
+
+	function mouseMoveHandler(e) {
+    	var relativeX = e.clientX - canvas.offsetLeft;
+    	if(relativeX > 0 && relativeX < canvas.width) {
+    	    paddleX = relativeX - paddleWidth/2;
+    	}
+	}
+	
+	function touchMoveHandler(e) {
+    	var relativeX = e.touches[0].clientX - canvas.offsetLeft;
+    	if(relativeX > 0 && relativeX < canvas.width) {
+    	    paddleX = relativeX - paddleWidth/2;
+    	}
+	}
+
+	function keyDownHandler(e) {
+    	if(e.keyCode == 39) {
+     	   rightPressed = true;
+    	}
+    	else if(e.keyCode == 37) {
+    	    leftPressed = true;
+   	 	}
+	}
+
+	function keyUpHandler(e) {
+   		if(e.keyCode == 39) {
+    	    rightPressed = false;
+    	}
+    	else if(e.keyCode == 37) {
+        	leftPressed = false;
+    	}
+	}
+	
+	function drawScore() {
+    	ctx.font = "16px Arial";
+    	ctx.fillStyle = "#0095DD";
+    	ctx.fillText("Score: "+score, 8, 20);
+	}
+
+	function drawBricks() {
+    	for(var c=0; c<brickColumnCount; c++) {
+       		for(var r=0; r<brickRowCount; r++) {
+       			if(bricks[c][r].status == 1) {
+       				var brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
+            		var brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
+            		bricks[c][r].x = brickX;
+            		bricks[c][r].y = brickY;
+            		ctx.beginPath();
+            		ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            		ctx.fillStyle = "#0095DD";
+            		ctx.fill();
+            		ctx.closePath();
+            	}
+        	}
+    	}
+	}
+	
+	function drawBall(){
+		ctx.beginPath();
+		ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+		ctx.fillStyle = "#0095DD";
+		ctx.fill();
+		ctx.closePath();
+	}
+	
+	function drawPaddle() {
+    	ctx.beginPath();
+    	ctx.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight);
+    	ctx.fillStyle = "#0095DD";
+    	ctx.fill();
+    	ctx.closePath();
+	}
+	
+	function collisionDetection() {
+    	for(var c=0; c<brickColumnCount; c++) {
+        	for(var r=0; r<brickRowCount; r++) {
+            	var b = bricks[c][r];
+            	if (b.status == 1){
+            		if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
+               			dy = -dy;
+               			b.status = 0;
+               			score++;
+               			if (paddleWidth > minPaddleWidth){
+               				paddleWidth -= 5;
+               			}
+               			if(score == brickRowCount*brickColumnCount) {
+                        	location.href = '#openModal2';
+		    				cancelAnimationFrame(requestId);
+                    	}
+            		}
+            	}
+        	}
+    	}
+	}
+	
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawBricks();
+    	drawBall();
+    	drawPaddle();
+    	drawScore();
+    	collisionDetection();
+    	if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
+    		dx = -dx;
+		}
+		if(y + dy < ballRadius) {
+    		dy = -dy;
+		} else if(y + dy > canvas.height-ballRadius) {
+    		if(x > paddleX && x < paddleX + paddleWidth) {
+        		dy = -dy;
+   			}
+    		else {
+        		location.href = '#openModal1';
+		    	cancelAnimationFrame(requestId);
+    		}
+		}
+		
+		if(rightPressed && paddleX < canvas.width-paddleWidth) {
+        	paddleX += 7;
+    	}
+    	else if(leftPressed && paddleX > 0) {
+       		paddleX -= 7;
+    	}
+		x += dx;
+    	y += dy;
+    	requestId = requestAnimationFrame(draw);
+	}
+	
+</script>
+
+</body>
+</html>

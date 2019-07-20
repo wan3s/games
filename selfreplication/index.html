@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=0.6,maximum-scale=0.6,initial-scale=0.6,user-scalable=no">
+    <title>Self-replication</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css" media="all">
+</head>
+<body onload="load_status.style.display = 'none'" style="overflow: hidden">
+<p id="load_status" style="font-size: 50pt; display: block; font-family: Helvetica; color: #cccccc; text-align: center; vertical-align: bottom">Загрузка...</p>
+<canvas id="myCanvas" width="1000" height="400"></canvas>
+
+<div id="openModal0" class="modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Вы выиграли!</h3>
+        <a href="index.html" title="Close" class="close">×</a>
+      </div>
+      <div class="modal-body">    
+        <p>Вы прикончили всех бактерий!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="openModal1" class="modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Вы проиграли!</h3>
+        <a href="index.html" title="Close" class="close">×</a>
+      </div>
+      <div class="modal-body">    
+        <p>Бактерий слишком много!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+	var windowHeight = document.documentElement.clientHeight;
+	var windowWidth = document.documentElement.clientWidth;
+	var mouseX = 0;
+	var mouseY = 0;
+	var score = 0;
+	var microbs = [];
+	var microbsNum = 8;
+	var speed = 3;
+	var replicationLimit = 100;
+	var maxMicrobsNum = 100;
+	var requestID;
+	var microbSrc = 'img/microb.png';
+	var startHeight = 50; 
+	var startWidth = startHeight;
+	var click = false;
+	
+	for(var i = 0; i < microbsNum; i++) {
+		var tempSpeedX = Math.random() * speed;
+		var tempSpeedY = Math.sqrt(speed * speed - tempSpeedX * tempSpeedX);
+		addItem(i, Math.random() * (windowWidth - 2 * startWidth) + startWidth, Math.random() * (windowHeight - 2 * startHeight) + startHeight, tempSpeedX, tempSpeedY, startWidth, startHeight);
+	}
+	
+	document.addEventListener("click", mouseClick, false);
+	document.addEventListener("touchstart", fingerTouch, false);
+	
+	function addItem(item, itemX, itemY, itemSpeedX, itemSpeedY, itemWidth, itemHeight){
+		microbs[item] = {x: itemX, y: itemY, speedX: itemSpeedX, speedY: itemSpeedY, width: itemWidth, height: itemHeight, incCoef: 0};
+	}
+	
+	function mouseClick() {
+		mouseX = event.clientX;
+		mouseY = event.clientY;
+		click = true;
+	}
+	
+	function fingerTouch() {
+		mouseX = event.touches[0].clientX;
+		mouseY = event.touches[0].clientY;
+		click = true;
+	}
+	
+	function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        windowHeight = document.documentElement.clientHeight;
+		windowWidth = document.documentElement.clientWidth;
+	}
+	
+	function drawScore() {
+    	ctx.font = "18px Arial";
+    	ctx.fillStyle = "#00a550";
+    	ctx.fillText("Счёт: " + score + " Бактерий: " + microbsNum, 8, 20);
+	}
+	
+	function drawBackGround(){
+		pic = new Image(); 
+		pic.src = 'img/toilet.png'; 
+		var newHeight = windowHeight;
+		var newWidth = newHeight * (pic.width/pic.height);
+        ctx.drawImage(pic, (windowWidth - newWidth)/2, 0, newWidth, newHeight);  // Рисуем изображение от точки с координатами 0, 0
+	}
+	
+	function drawMicrobs(){
+		for (var i = 0; i < microbsNum; i++){
+		
+			pic = new Image(); 
+			pic.src = microbSrc; 
+			microbs[i].width = microbs[i].height * (pic.width / pic.height);
+        	ctx.drawImage(pic, microbs[i].x - (microbs[i].width) / 2, microbs[i].y - (microbs[i].height) / 2, microbs[i].width, microbs[i].height);
+		}
+	}
+	
+	function moveMicrobs(){
+		for (var i = 0; i < microbsNum; i++){
+			if (microbs[i].x - (microbs[i].width) / 2 + microbs[i].speedX <= 0 || microbs[i].x + microbs[i].width / 2 + microbs[i].speedX >= windowWidth){
+				microbs[i].speedX = (-1) * microbs[i].speedX;
+			} 
+			if (microbs[i].y - microbs[i].height / 2 + microbs[i].speedY <= 0 || microbs[i].y + microbs[i].height / 2 + microbs[i].speedY >= windowHeight){
+				microbs[i].speedY = (-1) * microbs[i].speedY;
+			}
+			microbs[i].x += microbs[i].speedX;
+			microbs[i].y += microbs[i].speedY;
+		}
+	}
+	
+	function addMicrobs(){
+		for (var i = 0; i < microbsNum; i++){
+			if (microbs[i].height > replicationLimit){
+				var tempSpeedX = Math.random() * speed;
+				var tempSpeedY = Math.sqrt(speed * speed - tempSpeedX * tempSpeedX);
+				addItem(microbsNum, microbs[i].x, microbs[i].y, tempSpeedX, tempSpeedY, startWidth, startHeight, 0);
+				microbsNum++;
+				microbs[i].width = startWidth;
+				microbs[i].height = startHeight;
+				microbs[i].incCoef = 0;
+			} else if (microbs[i].incCoef >= 10){
+				var newHeight = microbs[i].height + 1;
+				var newWidth = newHeight * (microbs[i].width / microbs[i].height);
+				microbs[i].height = newHeight;
+				microbs[i].width = newWidth;
+				microbs[i].incCoef = 0;				
+			} else {
+				microbs[i].incCoef++;
+			}
+		}
+		if (microbsNum >= maxMicrobsNum){
+			location.href = '#openModal1';
+			cancelAnimationFrame(requestId);
+		}
+	}
+	
+	function deleteRecord(i){
+		if (i < microbsNum - 1){
+			for (var j = i; j < microbsNum; j++){
+				microbs[i] = microbs[j];
+			}
+		}
+	}
+	
+	function delMicrobs(){
+		for (var i = 0; i < microbsNum; i++){
+			if (click && mouseX >= microbs[i].x - microbs[i].width / 2 && mouseX <= microbs[i].x + microbs[i].width / 2 && mouseY >= microbs[i].y - microbs[i].height / 2 && mouseY <= microbs[i].y + microbs[i].height / 2){
+				deleteRecord(i);
+				microbsNum--;
+				i--;
+				score++
+			}
+		}
+		if (microbsNum == 0){
+			location.href = '#openModal0';
+			cancelAnimationFrame(requestId);
+		}
+	}
+	
+	function draw() {
+		resizeCanvas();
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		drawBackGround();
+		drawMicrobs();
+		moveMicrobs();
+		addMicrobs();
+		delMicrobs();
+		drawScore();
+		click = false;
+		requestID = requestAnimationFrame(draw);
+	}
+	
+	draw(); 
+</script>
+
+</body>
+</html>

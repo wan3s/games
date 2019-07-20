@@ -1,0 +1,51 @@
+<html>
+<head>
+	<title>	ABSOLUTELY new game </title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, minimum-scale=0.5,maximum-scale=0.5,initial-scale=0.5,user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="css/style.css" media="all">
+</head>
+<body> 
+	
+	<div id="openModal1" class="modal">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h3 class="modal-title">Вы проиграли</h3>
+        			<a href="new_game.html" title="Close" class="close">×</a>
+      			</div>
+      			<div class="modal-body">    
+        			<p>Патрик лопнул :(</p>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+	
+	<div id="openModal2" class="modal">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h3 class="modal-title">Вы проиграли</h3>
+        			<a href="new_game.html" title="Close" class="close">×</a>
+      			</div>
+      			<div class="modal-body">    
+        			<p>Патрик сдох от передоза :(</p>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+
+	<img id="patrick" class="patrick" src="img/patrick.png" alt="patrick">
+
+	<input type="text" readonly value="WEIGHT" id="weight_label" class="brd info_label">
+	<input type="text" readonly value="SCORE" id="score_label" class="brd info_label">
+	<input type="text" readonly value="MAX SCORE" id="max_score_label" class="brd info_label">
+	
+	<input type="text" readonly value="0" id="write_weight" class="brd info_value">
+    <input type="text" readonly value="0" id="write_score" class="brd info_value">
+	<input type="text" readonly value="0" id="write_max_score" class="brd info_value">
+	
+	<script type="text/javascript" src="js/main.js"></script>
+
+</body>
+</html>
